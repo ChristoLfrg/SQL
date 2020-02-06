@@ -1,9 +1,10 @@
-DROP FUNCTION IF EXISTS MoyFormat();
+DROP FUNCTION IF EXISTS stat_Form();
+DROP FUNCTION IF EXISTS MoyFormat(f varchar(30));
 DROP FUNCTION IF EXISTS MoyNote();
 DROP TABLE IF EXISTS StatResultat;
 DROP TABLE IF EXISTS TabNote;
 DROP TABLE IF EXISTS Matiere;
-DROP TABLE IF EXISTS Formation;
+DROP TABLE IF EXISTS Formation CASCADE;
 DROP TABLE IF EXISTS Enseignant;
 DROP TABLE IF EXISTS Etudiant;
 
@@ -92,9 +93,10 @@ INSERT INTO TabNote VALUES
 	(101, 'Le biome',				'SVG',			16.3),
 	(102, 'C++',					'Informatique', 11.4),
 	(102, 'DevWeb',					'Informatique',	9.9),
-	(102, 'Descartes',				'Philosophie',	4.6),
-	(102, 'Ens de Platon',			'Philosophie',	15.4);
+	(103, 'Descartes',				'Philosophie',	4.6),
+	(103, 'Ens de Platon',			'Philosophie',	15.4);
 SELECT * FROM TabNote;
+
 --2
 CREATE FUNCTION MoyNote() 
 	RETURNS FLOAT AS $$
@@ -118,17 +120,19 @@ END;
 $$ LANGUAGE 'plpgsql';
 
 SELECT MoyNote();
---3
-SELECT Nom, Prenom, Note FROM Etudiant NATURAL JOIN TabNote	
-	WHERE Note > MoyNote();
 
---4 A FAIRE
-CREATE FUNCTION MoyFormat(Formation) 
+--3
+SELECT e1.Nom, e1.Prenom, t1.Note FROM Etudiant e1 NATURAL JOIN TabNote t1	
+	WHERE t1.Note =
+	(SELECT max(t2.Note) FROM Etudiant e2 NATURAL JOIN TabNote t2 WHERE e1.Nom = e2.Nom AND t2.Note > MoyNote());
+
+--4
+CREATE FUNCTION MoyFormat(f varchar(30))
 	RETURNS FLOAT AS $$
 DECLARE
 	curs CURSOR 
 		FOR SELECT t.Note, mat.Coef 
-		FROM TabNote t NATURAL JOIN Matiere mat;
+		FROM TabNote t NATURAL JOIN Matiere mat WHERE mat.NomForm = f;
 	total float;
 	card int;
 BEGIN
@@ -143,6 +147,48 @@ BEGIN
 		RETURN total/card;
 END;
 $$ LANGUAGE 'plpgsql';
+
+SELECT MoyFormat('Philosophie');
+
+--5
+CREATE FUNCTION stat_Form() RETURNS FLOAT AS $$
+DECLARE
+	curs CURSOR 
+		FOR SELECT f.NomForm, t.Note
+		FROM Formation f, TabNote t;
+BEGIN
+	FOR i IN curs
+	LOOP
+		INSERT INTO StatResultat VALUES (f.NomForm, MoyFormat(f.NomForm), null, null, null, null);
+		
+	END LOOP;
+END;
+$$ LANGUAGE 'plpgsql';
+
+
+SELECT stat_Form();
+
+SELECT * FROM StatResultat;
+
+--6
+/*
+CREATE FUNCTION InfoEt (et int)
+	RETURNS FLOAT AS $$
+DECLARE
+	SELECT e.NumEt, mat.NomForm, mat.NomMat
+		FROM Etudiant e NATURAL JOIN Matiere mat WHERE e.NumEt = et;
+	*/	
+
+
+
+
+
+
+
+
+
+
+
 
 
 
