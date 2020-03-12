@@ -1,3 +1,9 @@
+DROP TRIGGER IF EXISTS angevinsVolaille ON eleveur CASCADE;
+DROP FUNCTION fVolaille();
+
+DROP TRIGGER IF EXISTS climatParis ON eleveur CASCADE;
+DROP FUNCTION fClimat();
+
 DROP TABLE IF EXISTS eleveur;
 
 DROP TABLE IF EXISTS adresse;
@@ -29,7 +35,7 @@ CREATE TABLE adresse OF t_adresse;
 
 INSERT iNtO adresse VALUES
 	(3,		'August',	'Angers',	49000),
-	(12,	'Miche',	'Pont-Cé',	49200),
+	(12,	'Miche',	'Paris',	75000),
 	(20,	'Trouve',	'Bordeaux',	33000),
 	(54,	'August',	'Beaucouz',	48000);		SELECT * FROM adresse;
 
@@ -42,10 +48,10 @@ CREATE TABLE eleveur (
 INSERT INTO eleveur VALUES
 	(1,		(SELECT e FROM elevage e WHERE animal = 'ovin'),		(SELECT e FROM adresse e WHERE nrue = 3)),
 	(2,		(SELECT e FROM elevage e WHERE animal = 'bovins'),		(SELECT e FROM adresse e WHERE nrue = 12)),
-	(3,		(SELECT e FROM elevage e WHERE animal = 'volaille'),	(SELECT e FROM adresse e WHERE nrue = 54));
+	(3,		(SELECT e FROM elevage e WHERE animal = 'porcin'),	(SELECT e FROM adresse e WHERE nrue = 3));
 	
 UPDATE eleveur VALUES
-	SET elevage.animal='porcin' WHERE Licence=2;
+	SET elevage=(SELECT e FROM elevage e WHERE animal = 'porcin') WHERE Licence=2;
 
 												SELECT * FROM eleveur ORDER BY Licence;
 
@@ -54,4 +60,53 @@ UPDATE eleveur e
 		
 												SELECT * FROM eleveur ORDER BY Licence;
 
-CREATE TRIGGER climatParis 
+UPDATE eleveur e
+	SET elevage=NULL WHERE (e.adresse).CP = 75000;
+												SELECT * FROM eleveur ORDER BY Licence;
+
+CREATE FUNCTION fClimat() RETURNS TRIGGER AS $$
+BEGIN
+	IF (NEW.adresse).CP = 75000 
+		THEN NEW.elevage = NULL;
+	END IF;
+	RETURN NEW;
+END $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER climatParis BEFORE INSERT ON eleveur 
+FOR EACH ROW EXECUTE PROCEDURE fClimat();
+
+INSERT INTO eleveur VALUES
+(4, (SELECT e FROM elevage e WHERE animal = 'bovins'), (SELECT e FROM adresse e WHERE nrue = 12));
+
+												SELECT * FROM eleveur ORDER BY Licence;
+
+UPDATE eleveur e
+	SET elevage=(SELECT el FROM elevage el WHERE animal = 'volaille') WHERE (e.adresse).ville = 'Angers';
+												SELECT * FROM eleveur ORDER BY Licence;
+												
+CREATE FUNCTION fVolaille() RETURNS TRIGGER AS $$
+BEGIN
+	IF (NEW.adresse).ville = 'Angers'
+		THEN NEW.elevage =(SELECT e FROM elevage e WHERE animal = 'volaille');
+	END IF;
+	RETURN NEW;
+END $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER angevinsVolaille BEFORE INSERT ON eleveur 
+FOR EACH ROW EXECUTE PROCEDURE fvolaille();
+
+INSERT INTO eleveur VALUES
+(5, (SELECT e FROM elevage e WHERE animal = 'bovins'), (SELECT e FROM adresse e WHERE nrue = 3));
+
+
+
+
+
+
+
+
+
+
+
+
+
